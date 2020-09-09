@@ -177,7 +177,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     int xpos = l;
     int ypos = l;
 
-    while (!(i == 0 || j == 0)) {
+    while (i > 0 && j > 0) {
         if (x[i - 1] == y[j - 1]) {
             xans[xpos--] = (int)x[i - 1];
             yans[ypos--] = (int)y[j - 1];

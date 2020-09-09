@@ -83,6 +83,8 @@ int main() {
 /* All of your changes should be below this line. */
 /******************************************************************************/
 
+#include <omp.h>
+
 int min3(int a, int b, int c) {
     if (a <= b && a <= c) {
         return a;
@@ -132,10 +134,12 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     memset(dp[0], 0, size);
 
     // intialising the table
+    #pragma omp parallel for
     for (i = 0; i <= m; i++) {
         dp[i][0] = i * pgap;
     }
 
+    #pragma omp parallel for
     for (i = 0; i <= n; i++) {
         dp[0][i] = i * pgap;
     }

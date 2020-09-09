@@ -101,13 +101,17 @@ int **new2d(int width, int height) {
     size_t size = width;
     size *= height;
     int *dp0 = new int[size];
+
     if (!dp || !dp0) {
         std::cerr << "getMinimumPenalty: new failed" << std::endl;
         exit(1);
     }
+
     dp[0] = dp0;
-    for (int i = 1; i < width; i++)
+
+    for (int i = 1; i < width; i++) {
         dp[i] = dp[i - 1] + height;
+    }
 
     return dp;
 }
@@ -131,6 +135,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     for (i = 0; i <= m; i++) {
         dp[i][0] = i * pgap;
     }
+
     for (i = 0; i <= n; i++) {
         dp[0][i] = i * pgap;
     }
@@ -177,6 +182,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
             j--;
         }
     }
+
     while (xpos > 0) {
         if (i > 0) {
             xans[xpos--] = (int)x[--i];
@@ -184,6 +190,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
             xans[xpos--] = (int)'_';
         }
     }
+
     while (ypos > 0) {
         if (j > 0) {
             yans[ypos--] = (int)y[--j];

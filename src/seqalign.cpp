@@ -145,13 +145,18 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     }
 
     // calcuting the minimum penalty
-    for (i = 1; i <= m; i++) {
-        for (j = 1; j <= n; j++) {
-            if (x[i - 1] == y[j - 1]) {
-                dp[i][j] = dp[i - 1][j - 1];
+    for (int slice = 0; slice <= m + n - 1; slice++) {
+        int z1 = slice < m ? 0 : slice - m + 1;
+        int z2 = slice < n ? 0 : slice - n + 1;
+
+        #pragma omp parallel for
+        for (i = slice - z1; i >= z2; i--) {
+            j = slice - i;
+            if (x[i] == y[j]) {
+                dp[i + 1][j + 1] = dp[i][j];
             } else {
-                dp[i][j] = min3(dp[i - 1][j - 1] + pxy, dp[i - 1][j] + pgap,
-                                dp[i][j - 1] + pgap);
+                dp[i + 1][j + 1] = min3(dp[i][j] + pxy, dp[i][j + 1] + pgap,
+                                        dp[i + 1][j] + pgap);
             }
         }
     }

@@ -144,7 +144,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
         dp[0][i] = i * pgap;
     }
 
-    // calcuting the minimum penalty
+    // calculating the minimum penalty
     for (int slice = 0; slice <= m + n - 1; slice++) {
         int z1 = slice < m ? 0 : slice - m + 1;
         int z2 = slice < n ? 0 : slice - n + 1;

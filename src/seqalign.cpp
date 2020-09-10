@@ -133,23 +133,23 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     size *= n + 1;
     memset(dp[0], 0, size);
 
-    // intialising the table
-    #pragma omp parallel for
-    for (i = 0; i <= m; i++) {
-        dp[i][0] = i * pgap;
-    }
-
-    #pragma omp parallel for
-    for (i = 0; i <= n; i++) {
-        dp[0][i] = i * pgap;
-    }
-
-    // calculating the minimum penalty
     #pragma omp parallel
     {
         const int thread = omp_get_thread_num();
         const int width = omp_get_num_threads();
 
+        // intialising the table
+        for (i = thread; i <= m; i += width) {
+            dp[i][0] = i * pgap;
+        }
+
+        for (i = thread; i <= n; i += width) {
+            dp[0][i] = i * pgap;
+        }
+
+        #pragma omp barrier
+
+        // calculating the minimum penalty
         for (int slice = 0; slice <= m + n - 1; slice++) {
             int z1 = slice < m ? 0 : slice - m + 1;
             int z2 = slice < n ? 0 : slice - n + 1;

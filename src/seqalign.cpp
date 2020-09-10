@@ -122,8 +122,6 @@ int **new2d(int width, int height) {
 // return the maximum penalty and put the aligned sequences in xans and yans
 int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
                       int *xans, int *yans) {
-    int i, j; // intialising variables
-
     int m = x.length(); // length of gene1
     int n = y.length(); // length of gene2
 
@@ -135,6 +133,8 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
     #pragma omp parallel
     {
+        int i, j;
+
         const int thread = omp_get_thread_num();
         const int width = omp_get_num_threads();
 
@@ -171,8 +171,8 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     // Reconstructing the solution
     int l = n + m; // maximum possible length
 
-    i = m;
-    j = n;
+    int i = m;
+    int j = n;
 
     int xpos = l;
     int ypos = l;

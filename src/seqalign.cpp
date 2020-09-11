@@ -222,3 +222,5 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
     return ret;
 }
+
+// g++ -O3 -fopenmp -o odas-seqalignomp odas-seqalignomp.cpp

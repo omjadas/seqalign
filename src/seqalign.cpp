@@ -131,9 +131,12 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     size *= n + 1;
     memset(dp[0], 0, size);
 
+    int *js = new int[m];
+    memset(js, 0, m);
+
     #pragma omp parallel
     {
-        int i, j;
+        volatile int i, j;
 
         const int thread = omp_get_thread_num();
         const int width = omp_get_num_threads();
@@ -150,22 +153,44 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
         #pragma omp barrier
 
         // calculating the minimum penalty
-        for (int slice = 0; slice <= m + n - 1; slice++) {
-            int z1 = slice < m ? 0 : slice - m + 1;
-            int z2 = slice < n ? 0 : slice - n + 1;
 
-            for (i = slice - z1 - thread; i >= z2; i -= width) {
-                j = slice - i;
-                if (x[i] == y[j]) {
-                    dp[i + 1][j + 1] = dp[i][j];
-                } else {
-                    dp[i + 1][j + 1] = min3(dp[i][j] + pxy, dp[i][j + 1] + pgap,
-                                            dp[i + 1][j] + pgap);
+        for (i = 1 + thread; i <= m; i += width) {
+            for (j = 1; j <= n; j++) {
+                if (i > 1) {
+                    while (js[i - 1] < j) {
+                        // wait
+                    }
                 }
-            }
 
-            #pragma omp barrier
+                if (j > 0) {
+                    if (x[i - 1] == y[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1];
+                    } else {
+                        dp[i][j] = min3(dp[i - 1][j - 1] + pxy, dp[i - 1][j] + pgap,
+                                        dp[i][j - 1] + pgap);
+                    }
+                }
+
+                js[i]++;
+            }
         }
+
+        // for (int slice = 0; slice <= m + n - 1; slice++) {
+        //     int z1 = slice < m ? 0 : slice - m + 1;
+        //     int z2 = slice < n ? 0 : slice - n + 1;
+
+        //     for (i = slice - z1 - thread; i >= z2; i -= width) {
+        //         j = slice - i;
+        //         if (x[i] == y[j]) {
+        //             dp[i + 1][j + 1] = dp[i][j];
+        //         } else {
+        //             dp[i + 1][j + 1] = min3(dp[i][j] + pxy, dp[i][j + 1] + pgap,
+        //                                     dp[i + 1][j] + pgap);
+        //         }
+        //     }
+
+        //     #pragma omp barrier
+        // }
     }
 
     // Reconstructing the solution
@@ -219,6 +244,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
     delete[] dp[0];
     delete[] dp;
+    delete[] js;
 
     return ret;
 }

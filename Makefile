@@ -1,11 +1,15 @@
+CC = g++
+CFLAGS = -O3 -fopenmp -Wall -Wextra
 SRCDIR = ./src
 BINDIR = ./bin
 
-default: $(SRCDIR)/seqalign.cpp BinDir
-	g++-10 -O3 -fopenmp -o $(BINDIR)/seqalign $(SRCDIR)/seqalign.cpp
+default: compile
 
-debug: $(SRCDIR)/seqalign.cpp BinDir
-	g++-10 -O3 -fopenmp -D DEBUG -o $(BINDIR)/seqalign $(SRCDIR)/seqalign.cpp
+compile: $(SRCDIR)/seqalign.cpp BinDir
+	$(CC) $(CFLAGS) -o $(BINDIR)/seqalign $(SRCDIR)/seqalign.cpp
+
+debug: CFLAGS += -DDEBUG
+debug: compile
 
 BinDir:
 	mkdir -p $(BINDIR)

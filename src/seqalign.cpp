@@ -135,9 +135,6 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     {
         int i, j;
 
-        const int thread = omp_get_thread_num();
-        const int width = omp_get_num_threads();
-
         // intialising the table
 
         #pragma omp for nowait
@@ -156,7 +153,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
         //     for (int j = 2 - i; j < m + n; j++) {
 
         //         #ifdef DEBUG
-        //             printf("thread %d: (%d, %d)\n", thread, i, j);
+        //             printf("thread %d: (%d, %d)\n", omp_get_thread_num(), i, j);
         //         #endif
 
         //         if (j > 0) {
@@ -183,7 +180,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
                 j = slice - i;
 
                 #ifdef DEBUG
-                    printf("thread %d: (%d, %d)\n", thread, i, j);
+                    printf("thread %d: (%d, %d)\n", omp_get_thread_num(), i, j);
                 #endif
 
                 if (x[i] == y[j]) {

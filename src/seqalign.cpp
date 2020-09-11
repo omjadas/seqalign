@@ -139,23 +139,53 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
         const int width = omp_get_num_threads();
 
         // intialising the table
-        for (i = thread; i <= m; i += width) {
+
+        #pragma omp for nowait
+        for (i = 0; i <= m; i++) {
             dp[i][0] = i * pgap;
         }
 
-        for (i = thread; i <= n; i += width) {
+        #pragma omp for nowait
+        for (i = 0; i <= n; i++) {
             dp[0][i] = i * pgap;
         }
 
         #pragma omp barrier
+
+        // for (int i = 1 + thread; i < m; i += width) {
+        //     for (int j = 2 - i; j < m + n; j++) {
+
+        //         #ifdef DEBUG
+        //             printf("thread %d: (%d, %d)\n", thread, i, j);
+        //         #endif
+
+        //         if (j > 0) {
+        //             if (x[i] == y[j]) {
+        //                 dp[i + 1][j + 1] = dp[i][j];
+        //             } else {
+        //                 dp[i + 1][j + 1] = min3(dp[i][j] + pxy,
+        //                                         dp[i][j + 1] + pgap,
+        //                                         dp[i + 1][j] + pgap);
+        //             }
+        //         }
+
+        //         #pragma omp barrier
+        //     }
+        // }
 
         // calculating the minimum penalty
         for (int slice = 0; slice <= m + n - 1; slice++) {
             int z1 = slice < m ? 0 : slice - m + 1;
             int z2 = slice < n ? 0 : slice - n + 1;
 
-            for (i = slice - z1 - thread; i >= z2; i -= width) {
+            #pragma omp for nowait
+            for (i = slice - z1; i >= z2; i--) {
                 j = slice - i;
+
+                #ifdef DEBUG
+                    printf("thread %d: (%d, %d)\n", thread, i, j);
+                #endif
+
                 if (x[i] == y[j]) {
                     dp[i + 1][j + 1] = dp[i][j];
                 } else {

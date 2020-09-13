@@ -136,6 +136,9 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
     #pragma omp parallel private(i, j)
     {
+        const int thread = omp_get_thread_num();
+        const int width = omp_get_num_threads();
+
         // intialising the table
 
         #pragma omp for nowait
@@ -174,68 +177,64 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
             #pragma omp barrier
         }
-    }
 
-    // Reconstructing the solution
-    int l = n + m; // maximum possible length
+        // Reconstructing the solution
 
-    i = m;
-    j = n;
+        int l = n + m; // maximum possible length
 
-    int xpos = l;
-    int ypos = l;
+        i = m;
+        j = n;
 
-    while (!(i == 0 || j == 0)) {
-        if (x[i - 1] == y[j - 1]) {
-            xans[xpos--] = (int)x[i - 1];
-            yans[ypos--] = (int)y[j - 1];
-            i--;
-            j--;
-        } else if (dp[i - 1][j - 1] + pxy == dp[i][j]) {
-            xans[xpos--] = (int)x[i - 1];
-            yans[ypos--] = (int)y[j - 1];
-            i--;
-            j--;
-        } else if (dp[i - 1][j] + pgap == dp[i][j]) {
-            xans[xpos--] = (int)x[i - 1];
-            yans[ypos--] = (int)'_';
-            i--;
-        } else if (dp[i][j - 1] + pgap == dp[i][j]) {
-            xans[xpos--] = (int)'_';
-            yans[ypos--] = (int)y[j - 1];
-            j--;
-        }
-    }
+        int xpos = l;
+        int ypos = l;
 
-    #pragma omp parallel
-    {
-        const int thread = omp_get_thread_num();
-        const int width = omp_get_num_threads();
-
-        int xpos2 = xpos - thread;
-        int ypos2 = ypos - thread;
-
-        int i2 = i - thread;
-        int j2 = j - thread;
-
-        while (xpos2 > 0) {
-            i2 -= width;
-            if (i2 >= 0) {
-                xans[xpos2] = (int)x[i2];
-            } else {
-                xans[xpos2] = (int)'_';
+        #pragma omp single copyprivate(xpos, ypos, i, j)
+        while (!(i == 0 || j == 0)) {
+            if (x[i - 1] == y[j - 1]) {
+                xans[xpos--] = (int)x[i - 1];
+                yans[ypos--] = (int)y[j - 1];
+                i--;
+                j--;
+            } else if (dp[i - 1][j - 1] + pxy == dp[i][j]) {
+                xans[xpos--] = (int)x[i - 1];
+                yans[ypos--] = (int)y[j - 1];
+                i--;
+                j--;
+            } else if (dp[i - 1][j] + pgap == dp[i][j]) {
+                xans[xpos--] = (int)x[i - 1];
+                yans[ypos--] = (int)'_';
+                i--;
+            } else if (dp[i][j - 1] + pgap == dp[i][j]) {
+                xans[xpos--] = (int)'_';
+                yans[ypos--] = (int)y[j - 1];
+                j--;
             }
-            xpos2 -= width;
         }
 
-        while (ypos2 > 0) {
-            j2 -= width;
-            if (j2 >= 0) {
-                yans[ypos2] = (int)y[j2];
+        xpos -= thread;
+        ypos -= thread;
+
+        i -= thread;
+        j -= thread;
+
+        while (xpos > 0) {
+            i -= width;
+            if (i >= 0) {
+                xans[xpos] = (int)x[i];
             } else {
-                yans[ypos2] = (int)'_';
+                xans[xpos] = (int)'_';
             }
-            ypos2 -= width;
+            xpos -= width;
+        }
+
+        while (ypos > 0) {
+            j -= width;
+            if (j >= 0) {
+                yans[ypos] = (int)y[j];
+            } else {
+                yans[ypos] = (int)'_';
+            }
+            ypos -= width;
         }
     }
 

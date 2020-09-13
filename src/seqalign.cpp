@@ -132,6 +132,8 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     size *= n + 1;
     memset(dp[0], 0, size);
 
+    omp_set_num_threads(16);
+
     #pragma omp parallel private(i, j)
     {
         // intialising the table
@@ -183,7 +185,7 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     int xpos = l;
     int ypos = l;
 
-    while (i > 0 && j > 0) {
+    while (!(i == 0 || j == 0)) {
         if (x[i - 1] == y[j - 1]) {
             xans[xpos--] = (int)x[i - 1];
             yans[ypos--] = (int)y[j - 1];
@@ -205,19 +207,35 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
         }
     }
 
-    while (xpos > 0) {
-        if (i > 0) {
-            xans[xpos--] = (int)x[--i];
-        } else {
-            xans[xpos--] = (int)'_';
-        }
-    }
+    #pragma omp parallel
+    {
+        const int thread = omp_get_thread_num();
+        const int width = omp_get_num_threads();
 
-    while (ypos > 0) {
-        if (j > 0) {
-            yans[ypos--] = (int)y[--j];
-        } else {
-            yans[ypos--] = (int)'_';
+        int xpos2 = xpos - thread;
+        int ypos2 = ypos - thread;
+
+        int i2 = i - thread;
+        int j2 = j - thread;
+
+        while (xpos2 > 0) {
+            i2 -= width;
+            if (i2 >= 0) {
+                xans[xpos2] = (int)x[i2];
+            } else {
+                xans[xpos2] = (int)'_';
+            }
+            xpos2 -= width;
+        }
+
+        while (ypos2 > 0) {
+            j2 -= width;
+            if (j2 >= 0) {
+                yans[ypos2] = (int)y[j2];
+            } else {
+                yans[ypos2] = (int)'_';
+            }
+            ypos2 -= width;
         }
     }
 

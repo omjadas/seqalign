@@ -132,9 +132,6 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     size *= n + 1;
     memset(dp[0], 0, size);
 
-    int *js = new int[m];
-    memset(js, 0, m);
-
     #pragma omp parallel private(i, j)
     {
         // intialising the table
@@ -228,7 +225,6 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
     delete[] dp[0];
     delete[] dp;
-    delete[] js;
 
     return ret;
 }

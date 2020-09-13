@@ -122,6 +122,7 @@ int **new2d(int width, int height) {
 // return the maximum penalty and put the aligned sequences in xans and yans
 int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
                       int *xans, int *yans) {
+    int i, j;
     int m = x.length(); // length of gene1
     int n = y.length(); // length of gene2
 
@@ -134,10 +135,8 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
     int *js = new int[m];
     memset(js, 0, m);
 
-    #pragma omp parallel
+    #pragma omp parallel private(i, j)
     {
-        int i, j;
-
         // intialising the table
 
         #pragma omp for nowait
@@ -154,81 +153,35 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
         // calculating the minimum penalty
 
-        #pragma omp for
-        for (i = 1; i <= m; i++) {
-            for (j = 1; j <= n; j++) {
-                if (i > 1) {
-                    while (js[i - 1] < j) {
-                        // wait
-                        asm("nop");
-                    }
-                }
+        for (int slice = 0; slice <= m + n - 1; slice++) {
+            int z1 = slice < m ? 0 : slice - m + 1;
+            int z2 = slice < n ? 0 : slice - n + 1;
+
+            #pragma omp for nowait
+            for (i = slice - z1; i >= z2; i--) {
+                j = slice - i;
 
                 #ifdef DEBUG
                     printf("thread %d: (%d, %d)\n", omp_get_thread_num(), i, j);
                 #endif
 
-                if (x[i - 1] == y[j - 1]) {
-                    dp[i][j] = dp[i - 1][j - 1];
+                if (x[i] == y[j]) {
+                    dp[i + 1][j + 1] = dp[i][j];
                 } else {
-                    dp[i][j] = min3(dp[i - 1][j - 1] + pxy, dp[i - 1][j] + pgap,
-                                    dp[i][j - 1] + pgap);
+                    dp[i + 1][j + 1] = min3(dp[i][j] + pxy, dp[i][j + 1] + pgap,
+                                            dp[i + 1][j] + pgap);
                 }
-
-                js[i]++;
             }
+
+            #pragma omp barrier
         }
-
-        // for (int i = 1; i < m; i++) {
-        //     for (int j = 2 - i; j < m + n; j++) {
-
-        //         #ifdef DEBUG
-        //             printf("thread %d: (%d, %d)\n", omp_get_thread_num(), i, j);
-        //         #endif
-
-        //         if (j > 0) {
-        //             if (x[i] == y[j]) {
-        //                 dp[i + 1][j + 1] = dp[i][j];
-        //             } else {
-        //                 dp[i + 1][j + 1] = min3(dp[i][j] + pxy,
-        //                                         dp[i][j + 1] + pgap,
-        //                                         dp[i + 1][j] + pgap);
-        //             }
-        //         }
-
-        //         #pragma omp barrier
-        //     }
-        // }
-
-        // for (int slice = 0; slice <= m + n - 1; slice++) {
-        //     int z1 = slice < m ? 0 : slice - m + 1;
-        //     int z2 = slice < n ? 0 : slice - n + 1;
-
-        //     #pragma omp for nowait
-        //     for (i = slice - z1; i >= z2; i--) {
-        //         j = slice - i;
-
-        //         #ifdef DEBUG
-        //             printf("thread %d: (%d, %d)\n", omp_get_thread_num(), i, j);
-        //         #endif
-
-        //         if (x[i] == y[j]) {
-        //             dp[i + 1][j + 1] = dp[i][j];
-        //         } else {
-        //             dp[i + 1][j + 1] = min3(dp[i][j] + pxy, dp[i][j + 1] + pgap,
-        //                                     dp[i + 1][j] + pgap);
-        //         }
-        //     }
-
-        //     #pragma omp barrier
-        // }
     }
 
     // Reconstructing the solution
     int l = n + m; // maximum possible length
 
-    int i = m;
-    int j = n;
+    i = m;
+    j = n;
 
     int xpos = l;
     int ypos = l;

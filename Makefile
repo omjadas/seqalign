@@ -9,7 +9,7 @@ omp: $(SRCDIR)/seqalignomp.cpp BinDir
 	$(CC) $(CFLAGS) -fopenmp -o $(BINDIR)/seqalignomp $(SRCDIR)/seqalignomp.cpp
 
 mpi: $(SRCDIR)/seqalignmpi.cpp BinDir
-	mpicc $(CFLAGS) -o $(BINDIR)/seqalignmpi $(SCRCIR)/seqalignmpi.cpp
+	mpicxx $(CFLAGS) -o $(BINDIR)/seqalignmpi $(SRCDIR)/seqalignmpi.cpp
 
 debug: CFLAGS += -DDEBUG
 debug: default

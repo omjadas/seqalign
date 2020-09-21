@@ -1,15 +1,18 @@
 CC = g++
-CFLAGS = -O3 -fopenmp -Wall -Wextra
+CFLAGS = -O3 -Wall -Wextra
 SRCDIR = ./src
 BINDIR = ./bin
 
-default: compile
+default: omp mpi
 
-compile: $(SRCDIR)/seqalign.cpp BinDir
-	$(CC) $(CFLAGS) -o $(BINDIR)/seqalign $(SRCDIR)/seqalign.cpp
+omp: $(SRCDIR)/seqalignomp.cpp BinDir
+	$(CC) $(CFLAGS) -fopenmp -o $(BINDIR)/seqalignomp $(SRCDIR)/seqalignomp.cpp
+
+mpi: $(SRCDIR)/seqalignmpi.cpp BinDir
+	mpicc $(CFLAGS) -o $(BINDIR)/seqalignmpi $(SCRCIR)/seqalignmpi.cpp
 
 debug: CFLAGS += -DDEBUG
-debug: compile
+debug: default
 
 BinDir:
 	mkdir -p $(BINDIR)

@@ -57,14 +57,14 @@ int main(int argc, char **argv) {
 
         uint64_t start = GetTimeStamp();
 
-        // return all the penalties and the hash of all allignments
+        // return all the penalties and the hash of all alignments
         std::string alignmentHash = getMinimumPenalties(
             genes, k, misMatchPenalty, gapPenalty, penalties);
 
         // print the time taken to do the computation
         printf("Time: %ld us\n", (uint64_t)(GetTimeStamp() - start));
 
-        // print the alginment hash
+        // print the alignment hash
         std::cout << alignmentHash << std::endl;
 
         for (int i = 0; i < numPairs; i++) {

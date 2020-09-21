@@ -260,3 +260,5 @@ int getMinimumPenalty(std::string x, std::string y, int pxy, int pgap,
 
     return ret;
 }
+
+// mpicxx -O3 -o odas-seqalkway odas-seqalkway.cpp

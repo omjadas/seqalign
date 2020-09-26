@@ -157,16 +157,26 @@ std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
             alignmentHash =
                 sw::sha512::calculate(alignmentHash.append(problemhash));
 
-            // Uncomment for testing purposes
-            // std::cout << penalties[probNum] << std::endl;
-            // std::cout << align1 << std::endl;
-            // std::cout << align2 << std::endl;
-            // std::cout << std::endl;
+            #ifdef DEBUG
+                std::cout << penalties[probNum] << std::endl;
+                std::cout << align1 << std::endl;
+                std::cout << align2 << std::endl;
+                std::cout << std::endl;
+            #endif
 
             probNum++;
         }
     }
     return alignmentHash;
+}
+
+std::string recvString() {
+    MPI::Status status;
+    MPI::COMM_WORLD.Probe(root, 1, status);
+    int l = status.Get_count(MPI::CHAR);
+    char *buf = new char[l];
+    MPI::COMM_WORLD.Recv(buf, 1, MPI::CHAR, root, 1, status);
+    return buf;
 }
 
 // called for all tasks with rank!=root

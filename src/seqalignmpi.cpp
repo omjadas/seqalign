@@ -84,8 +84,6 @@ int main(int argc, char **argv) {
 /* All of your changes should be below this line. */
 /******************************************************************************/
 
-std::string recvString(int source, int tag);
-
 int min3(int a, int b, int c) {
     if (a <= b && a <= c) {
         return a;
@@ -146,9 +144,13 @@ std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
 
         MPI_Recv(&penalties[probNum], 1, MPI_INT, rank, probNum, comm,
                  &status);
-        std::string problemhash = recvString(rank, probNum + numPairs);
+
+        char buf[129];
+        MPI_Recv(buf, 128, MPI_CHAR, rank, probNum + numPairs, comm, &status);
+        buf[128] = '\0';
+
         alignmentHash =
-            sw::sha512::calculate(alignmentHash.append(problemhash));
+            sw::sha512::calculate(alignmentHash.append(buf));
 
         #ifdef DEBUG
             std::cout << penalties[probNum] << std::endl;
@@ -159,16 +161,6 @@ std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
     }
 
     return alignmentHash;
-}
-
-std::string recvString(int source, int tag) {
-    MPI_Status status;
-    MPI_Probe(source, tag, comm, &status);
-    int l;
-    MPI_Get_count(&status, MPI_CHAR, &l);
-    char *buf = new char[l];
-    MPI_Recv(buf, l, MPI_CHAR, source, tag, comm, &status);
-    return buf;
 }
 
 // called for all tasks with rank!=root

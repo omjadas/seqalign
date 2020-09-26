@@ -84,6 +84,8 @@ int main(int argc, char **argv) {
 /* All of your changes should be below this line. */
 /******************************************************************************/
 
+std::string recvString(int source, int tag);
+
 int min3(int a, int b, int c) {
     if (a <= b && a <= c) {
         return a;
@@ -118,70 +120,133 @@ int **new2d(int width, int height) {
 // and put together results, etc.
 std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
                                 int *penalties) {
+    MPI_Status status;
+    int numPairs = k * (k - 1) / 2;
     int probNum = 0;
+    int size;
+    int rank = -1;
     std::string alignmentHash = "";
-    for (int i = 1; i < k; i++) {
-        for (int j = 0; j < i; j++) {
-            std::string gene1 = genes[i];
-            std::string gene2 = genes[j];
-            int m = gene1.length(); // length of gene1
-            int n = gene2.length(); // length of gene2
-            int l = m + n;
-            int xans[l + 1], yans[l + 1];
-            penalties[probNum] =
-                getMinimumPenalty(gene1, gene2, pxy, pgap, xans, yans);
-            // Since we have assumed the answer to be n+m long,
-            // we need to remove the extra gaps in the starting
-            // id represents the index from which the arrays
-            // xans, yans are useful
-            int id = 1;
-            int a;
-            for (a = l; a >= 1; a--) {
-                if ((char)yans[a] == '_' && (char)xans[a] == '_') {
-                    id = a + 1;
-                    break;
-                }
-            }
-            std::string align1 = "";
-            std::string align2 = "";
-            for (a = id; a <= l; a++) {
-                align1.append(1, (char)xans[a]);
-            }
-            for (a = id; a <= l; a++) {
-                align2.append(1, (char)yans[a]);
-            }
-            std::string align1hash = sw::sha512::calculate(align1);
-            std::string align2hash = sw::sha512::calculate(align2);
-            std::string problemhash =
-                sw::sha512::calculate(align1hash.append(align2hash));
-            alignmentHash =
-                sw::sha512::calculate(alignmentHash.append(problemhash));
 
-            #ifdef DEBUG
-                std::cout << penalties[probNum] << std::endl;
-                std::cout << align1 << std::endl;
-                std::cout << align2 << std::endl;
-                std::cout << std::endl;
-            #endif
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&k, 1, MPI_INT, root, comm);
+    MPI_Bcast(&numPairs, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pxy, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pgap, 1, MPI_INT, root, comm);
 
-            probNum++;
-        }
+    for (int i = 0; i < k; i++) {
+        std::string gene = genes[i];
+        int l = gene.length();
+        MPI_Bcast(&l, 1, MPI_INT, root, comm);
+        MPI_Bcast(const_cast<char *>(gene.c_str()), gene.length(), MPI_CHAR,
+                  root, comm);
     }
+
+    for (probNum = 0; probNum < numPairs; probNum++) {
+        rank = (probNum % (size - 1)) + 1;
+
+        MPI_Recv(&penalties[probNum], 1, MPI_INT, rank, probNum, comm,
+                 &status);
+        std::string problemhash = recvString(rank, probNum + numPairs);
+        alignmentHash =
+            sw::sha512::calculate(alignmentHash.append(problemhash));
+
+        #ifdef DEBUG
+            std::cout << penalties[probNum] << std::endl;
+            std::cout << align1 << std::endl;
+            std::cout << align2 << std::endl;
+            std::cout << std::endl;
+        #endif
+    }
+
     return alignmentHash;
 }
 
-std::string recvString() {
-    MPI::Status status;
-    MPI::COMM_WORLD.Probe(root, 1, status);
-    int l = status.Get_count(MPI::CHAR);
+std::string recvString(int source, int tag) {
+    MPI_Status status;
+    MPI_Probe(source, tag, comm, &status);
+    int l;
+    MPI_Get_count(&status, MPI_CHAR, &l);
     char *buf = new char[l];
-    MPI::COMM_WORLD.Recv(buf, 1, MPI::CHAR, root, 1, status);
+    MPI_Recv(buf, l, MPI_CHAR, source, tag, comm, &status);
     return buf;
 }
 
 // called for all tasks with rank!=root
 // do stuff for each MPI task based on rank
 void do_MPI_task(int rank) {
+    int size;
+    int probNum = 0;
+    int numPairs;
+    int k;
+    int l;
+    int pxy;
+    int pgap;
+
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&k, 1, MPI_INT, root, comm);
+    MPI_Bcast(&numPairs, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pxy, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pgap, 1, MPI_INT, root, comm);
+
+    std::string genes[k];
+
+    int penalties[numPairs];
+    std::string hashes[numPairs];
+
+    for (int i = 0; i < k; i++) {
+        MPI_Bcast(&l, 1, MPI_INT, root, comm);
+        char *buf = new char[l];
+        MPI_Bcast(buf, l, MPI_CHAR, root, comm);
+        buf[l] = '\0';
+        genes[i] = buf;
+    }
+
+    for (int i = 1; i < k; i++) {
+        for (int j = 0; j < i; j++) {
+            if (probNum % (size - 1) == rank - 1) {
+                std::string gene1 = genes[i];
+                std::string gene2 = genes[j];
+                int m = gene1.length(); // length of gene1
+                int n = gene2.length(); // length of gene2
+                int l = m + n;
+                int xans[l + 1], yans[l + 1];
+                penalties[probNum] =
+                    getMinimumPenalty(gene1, gene2, pxy, pgap, xans, yans);
+                // Since we have assumed the answer to be n+m long,
+                // we need to remove the extra gaps in the starting
+                // id represents the index from which the arrays
+                // xans, yans are useful
+                int id = 1;
+                int a;
+                for (a = l; a >= 1; a--) {
+                    if ((char)yans[a] == '_' && (char)xans[a] == '_') {
+                        id = a + 1;
+                        break;
+                    }
+                }
+                std::string align1 = "";
+                std::string align2 = "";
+                for (a = id; a <= l; a++) {
+                    align1.append(1, (char)xans[a]);
+                }
+                for (a = id; a <= l; a++) {
+                    align2.append(1, (char)yans[a]);
+                }
+                std::string align1hash = sw::sha512::calculate(align1);
+                std::string align2hash = sw::sha512::calculate(align2);
+                hashes[probNum] =
+                    sw::sha512::calculate(align1hash.append(align2hash));
+            }
+
+            probNum++;
+        }
+    }
+
+    for (probNum = -1 + rank; probNum < numPairs; probNum += size - 1) {
+        MPI_Send(&penalties[probNum], 1, MPI_INT, root, probNum, comm);
+        MPI_Send(hashes[probNum].c_str(), hashes[probNum].length(),
+                 MPI_CHAR, root, probNum + numPairs, comm);
+    }
 }
 
 // function to find out the minimum penalty

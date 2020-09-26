@@ -195,7 +195,7 @@ void do_MPI_task(int rank) {
 
     for (int i = 0; i < k; i++) {
         MPI_Bcast(&l, 1, MPI_INT, root, comm);
-        char *buf = new char[l];
+        char *buf = new char[l + 1];
         MPI_Bcast(buf, l, MPI_CHAR, root, comm);
         buf[l] = '\0';
         genes[i] = buf;

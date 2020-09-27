@@ -113,89 +113,14 @@ int **new2d(int width, int height) {
     return dp;
 }
 
-// called by the root MPI task only
-// this procedure should distribute work to other MPI tasks
-// and put together results, etc.
-std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
-                                int *penalties) {
-    MPI_Status status;
-    int numPairs = k * (k - 1) / 2;
+void calculatePenalties(int k, int size, int rank, int pxy, int pgap,
+                        std::string *genes, int *penalties,
+                        std::string *hashes) {
     int probNum = 0;
-    int size;
-    int rank = -1;
-    std::string alignmentHash = "";
-
-    MPI_Comm_size(comm, &size);
-    MPI_Bcast(&k, 1, MPI_INT, root, comm);
-    MPI_Bcast(&numPairs, 1, MPI_INT, root, comm);
-    MPI_Bcast(&pxy, 1, MPI_INT, root, comm);
-    MPI_Bcast(&pgap, 1, MPI_INT, root, comm);
-
-    for (int i = 0; i < k; i++) {
-        std::string gene = genes[i];
-        int l = gene.length();
-        MPI_Bcast(&l, 1, MPI_INT, root, comm);
-        MPI_Bcast(const_cast<char *>(gene.c_str()), gene.length(), MPI_CHAR,
-                  root, comm);
-    }
-
-    for (probNum = 0; probNum < numPairs; probNum++) {
-        rank = (probNum % (size - 1)) + 1;
-
-        MPI_Recv(&penalties[probNum], 1, MPI_INT, rank, probNum, comm,
-                 &status);
-
-        char buf[129];
-        MPI_Recv(buf, 128, MPI_CHAR, rank, probNum + numPairs, comm, &status);
-        buf[128] = '\0';
-
-        alignmentHash =
-            sw::sha512::calculate(alignmentHash.append(buf));
-
-        #ifdef DEBUG
-            std::cout << "Prob num " << probNum <<std::endl;
-            std::cout <<  buf << std::endl;
-            std::cout << penalties[probNum] << std::endl;
-            std::cout << std::endl;
-        #endif
-    }
-
-    return alignmentHash;
-}
-
-// called for all tasks with rank!=root
-// do stuff for each MPI task based on rank
-void do_MPI_task(int rank) {
-    int size;
-    int probNum = 0;
-    int numPairs;
-    int k;
-    int l;
-    int pxy;
-    int pgap;
-
-    MPI_Comm_size(comm, &size);
-    MPI_Bcast(&k, 1, MPI_INT, root, comm);
-    MPI_Bcast(&numPairs, 1, MPI_INT, root, comm);
-    MPI_Bcast(&pxy, 1, MPI_INT, root, comm);
-    MPI_Bcast(&pgap, 1, MPI_INT, root, comm);
-
-    std::string genes[k];
-
-    int penalties[numPairs];
-    std::string hashes[numPairs];
-
-    for (int i = 0; i < k; i++) {
-        MPI_Bcast(&l, 1, MPI_INT, root, comm);
-        char *buf = new char[l + 1];
-        MPI_Bcast(buf, l, MPI_CHAR, root, comm);
-        buf[l] = '\0';
-        genes[i] = buf;
-    }
 
     for (int i = 1; i < k; i++) {
         for (int j = 0; j < i; j++) {
-            if (probNum % (size - 1) == rank - 1) {
+            if (probNum % size == rank) {
                 std::string gene1 = genes[i];
                 std::string gene2 = genes[j];
                 int m = gene1.length(); // length of gene1
@@ -233,8 +158,99 @@ void do_MPI_task(int rank) {
             probNum++;
         }
     }
+}
 
-    for (probNum = -1 + rank; probNum < numPairs; probNum += size - 1) {
+// called by the root MPI task only
+// this procedure should distribute work to other MPI tasks
+// and put together results, etc.
+std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
+                                int *penalties) {
+    MPI_Status status;
+    int numPairs = k * (k - 1) / 2;
+    int probNum = 0;
+    int size;
+    int rank = -1;
+    std::string hashes[numPairs];
+    std::string alignmentHash = "";
+
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&k, 1, MPI_INT, root, comm);
+    MPI_Bcast(&numPairs, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pxy, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pgap, 1, MPI_INT, root, comm);
+
+    for (int i = 0; i < k; i++) {
+        std::string gene = genes[i];
+        int l = gene.length();
+        MPI_Bcast(&l, 1, MPI_INT, root, comm);
+        MPI_Bcast(const_cast<char *>(gene.c_str()), gene.length(), MPI_CHAR,
+                  root, comm);
+    }
+
+    calculatePenalties(k, size, root, pxy, pgap, genes, penalties, hashes);
+
+    for (probNum = 0; probNum < numPairs; probNum++) {
+        rank = probNum % size;
+
+        if (rank != 0) {
+            MPI_Recv(&penalties[probNum], 1, MPI_INT, rank, probNum, comm,
+                     &status);
+
+            char buf[129];
+            MPI_Recv(buf, 128, MPI_CHAR, rank, probNum + numPairs, comm,
+                     &status);
+            buf[128] = '\0';
+
+            alignmentHash = sw::sha512::calculate(alignmentHash.append(buf));
+
+            #ifdef DEBUG
+                std::cout << "Prob num " << probNum <<std::endl;
+                std::cout <<  buf << std::endl;
+                std::cout << penalties[probNum] << std::endl;
+                std::cout << std::endl;
+            #endif
+        } else {
+            alignmentHash =
+                sw::sha512::calculate(alignmentHash.append(hashes[probNum]));
+        }
+    }
+
+    return alignmentHash;
+}
+
+// called for all tasks with rank!=root
+// do stuff for each MPI task based on rank
+void do_MPI_task(int rank) {
+    int size;
+    int probNum = 0;
+    int numPairs;
+    int k;
+    int l;
+    int pxy;
+    int pgap;
+
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&k, 1, MPI_INT, root, comm);
+    MPI_Bcast(&numPairs, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pxy, 1, MPI_INT, root, comm);
+    MPI_Bcast(&pgap, 1, MPI_INT, root, comm);
+
+    std::string genes[k];
+
+    int penalties[numPairs];
+    std::string hashes[numPairs];
+
+    for (int i = 0; i < k; i++) {
+        MPI_Bcast(&l, 1, MPI_INT, root, comm);
+        char buf[l + 1];
+        MPI_Bcast(buf, l, MPI_CHAR, root, comm);
+        buf[l] = '\0';
+        genes[i] = buf;
+    }
+
+    calculatePenalties(k, size, rank, pxy, pgap, genes, penalties, hashes);
+
+    for (probNum = rank; probNum < numPairs; probNum += size) {
         MPI_Send(&penalties[probNum], 1, MPI_INT, root, probNum, comm);
         MPI_Send(hashes[probNum].c_str(), hashes[probNum].length(),
                  MPI_CHAR, root, probNum + numPairs, comm);

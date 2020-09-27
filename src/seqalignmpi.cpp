@@ -153,9 +153,9 @@ std::string getMinimumPenalties(std::string *genes, int k, int pxy, int pgap,
             sw::sha512::calculate(alignmentHash.append(buf));
 
         #ifdef DEBUG
+            std::cout << "Prob num " << probNum <<std::endl;
+            std::cout <<  buf << std::endl;
             std::cout << penalties[probNum] << std::endl;
-            std::cout << align1 << std::endl;
-            std::cout << align2 << std::endl;
             std::cout << std::endl;
         #endif
     }
